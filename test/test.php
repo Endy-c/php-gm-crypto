@@ -22,7 +22,7 @@ var_dump("Plain text:{$decrypted}");
 
 $end = microtime(true);
 
-$algrithm = $sm4->isOpenssl() ? 'openssl' : 'php-gm-crypto';
+$algorithm = $sm4->isOpenssl() ? 'openssl' : 'php-gm-crypto';
 
-var_dump("Algrithm is:{$algrithm}");
+var_dump("Algrithm is:{$algorithm}");
 var_dump('Time elapsed:' . number_format($end - $start, 8) . ' s');
