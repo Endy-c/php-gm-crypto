@@ -1,0 +1,17 @@
+{
+    "name": "evit/php-gm-crypto",
+    "description": "Fully compatible with the sm4-cbc and sm4-ecb state secret SM algorithms of openssl. When openssl >= 1.1.1 supports the state secret algorithm, directly call openssl for SM4 encryption and decryption, otherwise call the custom algorithm.",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Evit\\PhpGmCrypto\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Endy",
+            "email": "endy@evit.net.cn"
+        }
+    ],
+    "require": {}
+}
