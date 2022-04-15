@@ -55,7 +55,7 @@ $config = [
     'key'   => '{replace-your-key-here}',
     // the iv used by 'cbc' mode, will be will be processed by substr(md5($iv), 0, 16) if $config['hash']
     'iv'    => '{replace-your-iv-here}',
-    // weather do md5 to key and iv
+    // weather do md5 to key and iv or not
     'hash'  => false
 ];
 
