@@ -51,13 +51,15 @@ use Evit\PhpGmCrypto\Encryption\SMEncryption;
 $config = [
     // mode string 'cbc' or 'ecb' is supported, default is 'cbc'.
     'mode'  => 'cbc',
-    // password, will be processed by substr(md5($key), 0, 16)
+    // password, will be processed by substr(md5($key), 0, 16) if $config['hash']
     'key'   => '{replace-your-key-here}',
-    // the iv used by 'cbc' mode, will be will be processed by substr(md5($iv), 0, 16)
-    'iv'    => '{replace-your-iv-here}'
+    // the iv used by 'cbc' mode, will be will be processed by substr(md5($iv), 0, 16) if $config['hash']
+    'iv'    => '{replace-your-iv-here}',
+    // weather do md5 to key and iv
+    'hash'  => false
 ];
 
-$sm4 = new SMEncryption();
+$sm4 = new SMEncryption($config);
 ```
 
 #### Encrypt

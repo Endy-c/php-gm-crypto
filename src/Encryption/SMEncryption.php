@@ -39,12 +39,14 @@ class SMEncryption extends EvitEncryption
     private $hexIv;
     private $cryptor;
     private $mode = 'cbc';
+    private $hash = false;
 
     public function __construct($config = null)
     {
         $this->checkOpenssl();
         $this->key = $config['key'] ?? 'evit';
         $this->hexIv = $config['iv'] ?? 'evit';
+        $this->hash = $config['hash'] ?? false;
 
         $mode = strtolower($config['mode'] ?? '');
         if (in_array($mode, ['cbc', 'ecb'])) {
@@ -123,6 +125,10 @@ class SMEncryption extends EvitEncryption
      */
     private function getIvAndKey()
     {
+        if (!$this->hash) {
+            return [$this->hexIv, $this->key];
+        }
+
         // 获取IV长度
         $ivLength = $this->isOpenssl() ? openssl_cipher_iv_length('sm4-cbc') : 16;
         // key长度固定为16
