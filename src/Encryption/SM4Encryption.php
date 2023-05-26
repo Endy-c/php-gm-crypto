@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Define SMEncryption.php
+ * Define SM4Encryption.php
  *
  * PHP version 8
  *
@@ -32,7 +32,7 @@
 
 namespace Evit\PhpGmCrypto\Encryption;
 
-class SMEncryption extends EvitEncryption
+class SM4Encryption extends EvitEncryption
 {
     private $useOpenssl = false;
     private $key;
@@ -145,7 +145,7 @@ class SMEncryption extends EvitEncryption
             0,
             $keyLength
         );
-        
+
         return [$hexIv, $key];
     }
 

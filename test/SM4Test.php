@@ -32,7 +32,7 @@
 
 require_once __DIR__ . "/../../../../vendor/autoload.php";
 
-use Evit\PhpGmCrypto\Encryption\SMEncryption;
+use Evit\PhpGmCrypto\Encryption\SM4Encryption;
 
 $config = [
     // mode string 'cbc' or 'ecb' is supported, default is 'cbc'.
@@ -43,7 +43,7 @@ $config = [
     'iv'    => '{replace-your-iv-here}'
 ];
 
-$sm4 = new SMEncryption();
+$sm4 = new SM4Encryption();
 
 // Encrypt
 $start = microtime(true);

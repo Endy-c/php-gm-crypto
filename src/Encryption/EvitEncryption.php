@@ -40,11 +40,11 @@ class EvitEncryption extends BaseCrypto
      * @todo 算法文档里FK，CK，SBOX这几个常量都是写死的，弄清楚为什么
      * http://sca.hainan.gov.cn/xxgk/bzhgf/201804/W020180409400793061524.pdf
      */
-    const SM4_FK = [
+    protected const SM4_FK = [
         0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc
     ];
 
-    const SM4_CK = [
+    protected const SM4_CK = [
         0x00070e15, 0x1c232a31, 0x383f464d, 0x545b6269,
         0x70777e85, 0x8c939aa1, 0xa8afb6bd, 0xc4cbd2d9,
         0xe0e7eef5, 0xfc030a11, 0x181f262d, 0x343b4249,
@@ -55,7 +55,7 @@ class EvitEncryption extends BaseCrypto
         0x10171e25, 0x2c333a41, 0x484f565d, 0x646b7279
     ];
 
-    const SM4_SBOX = [
+    protected const SM4_SBOX = [
         0xd6, 0x90, 0xe9, 0xfe, 0xcc, 0xe1, 0x3d, 0xb7, 0x16, 0xb6, 0x14, 0xc2, 0x28, 0xfb, 0x2c, 0x05,
         0x2b, 0x67, 0x9a, 0x76, 0x2a, 0xbe, 0x04, 0xc3, 0xaa, 0x44, 0x13, 0x26, 0x49, 0x86, 0x06, 0x99,
         0x9c, 0x42, 0x50, 0xf4, 0x91, 0xef, 0x98, 0x7a, 0x33, 0x54, 0x0b, 0x43, 0xed, 0xcf, 0xac, 0x62,
@@ -75,7 +75,7 @@ class EvitEncryption extends BaseCrypto
     ];
 
     // 块长度，固定为16
-    const SM4_BLOCK_SIZE = 16;
+    protected const SM4_BLOCK_SIZE = 16;
 
     private $key;
     private $hexIv = null;
@@ -214,10 +214,12 @@ class EvitEncryption extends BaseCrypto
     {
         if ($type) {
             $rKeys = $isDecrypt ? $this->getDecryptRoundKey() : $this->getEncryptRoundKey();
-            return $roundK[$roundLoop] ^ $this->tTransformFunction($roundK[$roundLoop + 1] ^ $roundK[$roundLoop + 2] ^ $roundK[$roundLoop + 3] ^ $rKeys[$roundLoop], 1);
+            return $roundK[$roundLoop] ^ $this->tTransformFunction($roundK[$roundLoop + 1]
+             ^ $roundK[$roundLoop + 2] ^ $roundK[$roundLoop + 3] ^ $rKeys[$roundLoop], 1);
         }
 
-        return $this->int32($roundK[$roundLoop] ^ $this->tTransformFunction($roundK[$roundLoop + 1] ^ $roundK[$roundLoop + 2] ^ $roundK[$roundLoop + 3] ^ self::SM4_CK[$roundLoop]));
+        return $this->int32($roundK[$roundLoop] ^ $this->tTransformFunction($roundK[$roundLoop + 1]
+         ^ $roundK[$roundLoop + 2] ^ $roundK[$roundLoop + 3] ^ self::SM4_CK[$roundLoop]));
     }
 
     /**
@@ -269,9 +271,15 @@ class EvitEncryption extends BaseCrypto
     {
         if (!$type) {
             $input = $this->int32($input);
-            return $this->int32(self::SM4_SBOX[$this->uRightShift($input, 24) & 0xFF] << 24 | self::SM4_SBOX[$this->uRightShift($input, 16) & 0xFF] << 16 | self::SM4_SBOX[$this->uRightShift($input, 8) & 0xFF] << 8 | self::SM4_SBOX[$input & 0xFF]);
+            return $this->int32(self::SM4_SBOX[$this->uRightShift($input, 24) & 0xFF] << 24
+             | self::SM4_SBOX[$this->uRightShift($input, 16) & 0xFF] << 16
+             | self::SM4_SBOX[$this->uRightShift($input, 8) & 0xFF] << 8
+             | self::SM4_SBOX[$input & 0xFF]);
         }
-        return self::SM4_SBOX[$this->uRightShift($input, 24) & 0xFF] << 24 | self::SM4_SBOX[$this->uRightShift($input, 16) & 0xFF] << 16 | self::SM4_SBOX[$this->uRightShift($input, 8) & 0xFF] << 8 | self::SM4_SBOX[$input & 0xFF];
+        return self::SM4_SBOX[$this->uRightShift($input, 24) & 0xFF] << 24
+         | self::SM4_SBOX[$this->uRightShift($input, 16) & 0xFF] << 16
+         | self::SM4_SBOX[$this->uRightShift($input, 8) & 0xFF] << 8
+         | self::SM4_SBOX[$input & 0xFF];
     }
 
     /**
@@ -308,7 +316,8 @@ class EvitEncryption extends BaseCrypto
         // 解密块数量
         $numOfBlocks = count($u8Array) / self::SM4_BLOCK_SIZE;
         // 解密结果数组
-        $result = $this->mode == 'cbc' ? $this->cbcMode($u8Array, $numOfBlocks, 1) : $this->ecbMode($u8Array, $numOfBlocks, 1);
+        $result = $this->mode == 'cbc' ? $this->cbcMode($u8Array, $numOfBlocks, 1)
+         : $this->ecbMode($u8Array, $numOfBlocks, 1);
 
         $ret = $this->removePadding($result);
 
@@ -360,7 +369,7 @@ class EvitEncryption extends BaseCrypto
             $roundIndex = $i * self::SM4_BLOCK_SIZE;
             // 本轮加密块
             $block = $this->u8ToU32($padded, $roundIndex);
-            
+
             $cipherBlock = $this->doCrypt($chainBlock, $block, $isDecrypt);
             // 链密置换
             $chainBlock = $isDecrypt ? $block : $cipherBlock;

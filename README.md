@@ -46,7 +46,7 @@ composer require evit/php-gm-crypto
 // If you are using a framework that does not support psr-4 autoloader, you need to explicitly import package from the vendor directory.
 require_once __DIR__ . "/vendor/autoload.php";
 
-use Evit\PhpGmCrypto\Encryption\SMEncryption;
+use Evit\PhpGmCrypto\Encryption\SM4Encryption;
 
 $config = [
     // mode string 'cbc' or 'ecb' is supported, default is 'cbc'.
@@ -59,7 +59,7 @@ $config = [
     'hash'  => false
 ];
 
-$sm4 = new SMEncryption($config);
+$sm4 = new SM4Encryption($config);
 ```
 
 #### Encrypt
