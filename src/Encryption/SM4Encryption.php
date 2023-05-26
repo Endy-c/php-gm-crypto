@@ -32,7 +32,7 @@
 
 namespace Evit\PhpGmCrypto\Encryption;
 
-class SM4Encryption extends EvitEncryption
+class SM4Encryption extends EvitSM4Encryption
 {
     private $useOpenssl = false;
     private $key;

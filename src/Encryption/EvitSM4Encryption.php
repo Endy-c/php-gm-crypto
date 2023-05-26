@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Define EvitEncryption.php
+ * Define EvitSM4Encryption.php
  *
  * PHP version 8
  *
@@ -34,7 +34,7 @@ namespace Evit\PhpGmCrypto\Encryption;
 
 use Exception;
 
-class EvitEncryption extends BaseCrypto
+class EvitSM4Encryption extends BaseCrypto
 {
     /**
      * @todo 算法文档里FK，CK，SBOX这几个常量都是写死的，弄清楚为什么
