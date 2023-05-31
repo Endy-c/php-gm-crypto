@@ -62,9 +62,21 @@ class BaseCrypto
             $input &= 0x7FFFFFFF;
             $input = -$input;
         }
-        
+
         // $input = unpack('i', pack('i', $input))[1];
         return $input;
+    }
+
+    /**
+     * [buffer2int 把4字节buffer转成int32]
+     * @param  array $bytes [description]
+     * @return int32        [description]
+     */
+    protected function buffer2Int($bytes)
+    {
+        $int32 = pack('C*', ...$bytes);
+        $int32 = (unpack('l', $int32))[1];
+        return $this->int32($int32);
     }
 
     /**
@@ -78,6 +90,11 @@ class BaseCrypto
     protected function leftCircularRotation($u32Buffer, int $bits)
     {
         return (($u32Buffer << $bits) & 0xFFFFFFFF) | $this->uRightShift($u32Buffer, 32 - $bits);
+    }
+
+    protected function leftRotate($value, $bits)
+    {
+        return (($value << $bits) | ($value >> (32 - $bits))) & 0xFFFFFFFF;
     }
 
     /**
@@ -95,10 +112,12 @@ class BaseCrypto
             // L'：key expand
             case 0:
             default:
-                return $this->int32($input ^ $this->leftCircularRotation($input, 13) ^ $this->leftCircularRotation($input, 23));
-            // L：encrypt
+                return $this->int32($input ^ $this->leftCircularRotation($input, 13)
+                 ^ $this->leftCircularRotation($input, 23));
+                // L：encrypt
             case 1:
-                return $input ^ $this->leftCircularRotation($input, 2) ^ $this->leftCircularRotation($input, 10) ^ $this->leftCircularRotation($input, 18) ^ $this->leftCircularRotation($input, 24);
+                return $input ^ $this->leftCircularRotation($input, 2) ^ $this->leftCircularRotation($input, 10)
+                 ^ $this->leftCircularRotation($input, 18) ^ $this->leftCircularRotation($input, 24);
         }
     }
 
@@ -152,7 +171,8 @@ class BaseCrypto
 
         $u32Array = [];
         for ($i = 0; $i < 4; $i++) {
-            $u32Array[$i] = $u8Array[$baseIndex + $i * 4] << 24 | $u8Array[$baseIndex + $i * 4 + 1] << 16 | $u8Array[$baseIndex + $i * 4 + 2] << 8 | $u8Array[$baseIndex + $i * 4 + 3];
+            $u32Array[$i] = $u8Array[$baseIndex + $i * 4] << 24 | $u8Array[$baseIndex + $i * 4 + 1] << 16
+             | $u8Array[$baseIndex + $i * 4 + 2] << 8 | $u8Array[$baseIndex + $i * 4 + 3];
         }
         return $u32Array;
     }
