@@ -37,7 +37,7 @@ use Exception;
 /**
  * SM3国密算法实现：http://www.sca.gov.cn/sca/xxgk/2010-12/17/1002389/files/302a3ada057c4a73830536d03e683110.pdf
  */
-class SM3Encryption extends BaseCrypto
+class EvitSM3Encryption extends BaseCrypto
 {
     // 初始值，用于确定压缩函数寄存器的初态
     private const SM3_IV = [
@@ -60,7 +60,7 @@ class SM3Encryption extends BaseCrypto
      * [checkOpenssl 检查openssl库是否支持国密3]
      * @return
      */
-    protected function checkOpenssl()
+    private function checkOpenssl()
     {
         $ciphers = openssl_get_md_methods();
         if (in_array('sm3', $ciphers)) {
@@ -74,19 +74,14 @@ class SM3Encryption extends BaseCrypto
      */
     public function isOpenssl()
     {
-        return false;
         return $this->useOpenssl;
     }
 
-    public function hexArray($array)
-    {
-        $hex = array_map(function ($value) {
-            $hex = sprintf('%08x', $value);
-            return substr(implode('', array_reverse(str_split($hex, 2))), 0, 8);
-        }, $array);
-        return $hex;
-    }
-
+    /**
+     * [sm3 杂凑算法]
+     * @param  string $input [输入字符串]
+     * @return string        [hash后的字符串]
+     */
     public function sm3($input)
     {
         // 使用openssl的国密3算法加密返回
@@ -101,7 +96,6 @@ class SM3Encryption extends BaseCrypto
         $padded = $this->sm3Padding($input);
         // 获取分组后的结果m′
         $groupped = $this->group($padded);
-
         // 对m′按下列方式迭代：
         // FOR i=0 TO n-1
         // V(i+1) = CF(V(i), B(i))
@@ -113,54 +107,50 @@ class SM3Encryption extends BaseCrypto
         for ($i = 0; $i < $groupLength; $i++) {
             $vector = $this->sm3Compress($vector, $groupped[$i]);
         }
-
-        dd($vector);
+        // 将数组结果还原为字符串
+        return bin2hex(pack('N*', ...$vector));
     }
 
     /**
      * [expandMessage 5.3.2 消息扩展]
-     * @param  [type] $message  [B(i)，直接传入]
-     * @return [type]           [description]
+     * @param  array $message  [B(i)，直接传入分组后的消息]
+     * @return array           [prime:W数组，dash:W′数组]
      */
-    protected function expandMessage($message)
+    private function expandMessage($message)
     {
         // a)将消息分组B(i)划分为16个字W0, W1, · · · , W15。
         // 64个字节，按4字节分成16组得到W数组
-        $wGroup = array_chunk($message, 4);
-        $wGroup = array_map(function ($value) {
-            return $this->buffer2Int($value);
-        }, $wGroup);
+        $wGroup = array_values(unpack('N*', $message));
         // b)FOR j=16 TO 67
         // Wj ← P1(Wj−16 ⊕ Wj−9 ⊕ (Wj−3 ≪ 15)) ⊕ (Wj−13 ≪ 7) ⊕ Wj−6
         // ENDFOR
         for ($j = 16; $j < 68; $j++) {
-            $intValue = $this->sm3P1(
+            $wGroup[$j] = $this->sm3P1(
                 $wGroup[$j - 16] ^ $wGroup[$j - 9] ^ $this->leftCircularRotation(
                     $wGroup[$j - 3],
                     15
-                ) ^ $this->leftCircularRotation($wGroup[$j - 13], 7)
-                 ^ $wGroup[$j - 6]
-            );
-            // 得到的int可能溢出，转为int32
-            $wGroup[$j] = $this->int32($intValue);
+                )
+            ) ^ $this->leftCircularRotation($wGroup[$j - 13], 7)
+                 ^ $wGroup[$j - 6];
         }
+
         $wDashedGroup = [];
         // c)FOR j=0 TO 63
         // W′j = Wj ⊕ Wj+4
         // ENDFOR
         for ($j = 0; $j < 64; $j++) {
-            $wDashedGroup[$j] = $this->int32($wGroup[$j] ^ $wGroup[$j + 4]);
+            $wDashedGroup[$j] = $wGroup[$j] ^ $wGroup[$j + 4];
         }
-        return ['prime' => $this->hexArray($wGroup), 'dash' => $this->hexArray($wDashedGroup)];
+        return ['prime' => $wGroup, 'dash' => $wDashedGroup];
     }
 
     /**
-     * [sm3Compress description]
-     * @param  [type] $vector   [description]
-     * @param  [type] $groupped [description]
-     * @return [type]           [description]
+     * [sm3Compress SM3压缩函数CF]
+     * @param  array $vector   [256比特初始值IV，以及每次迭代中间值]
+     * @param  array $groupped [消息分组后的结果]
+     * @return array           [迭代后的中间值，最后一次迭代即为结果]
      */
-    protected function sm3Compress($vector, $groupped)
+    private function sm3Compress($vector, $groupped)
     {
         // 先记录Vi到一个新数组，防止后面的矩阵变换将Vi改变
         $vectorI = array_merge([], $vector);
@@ -176,33 +166,34 @@ class SM3Encryption extends BaseCrypto
         // H = $vector[7]
 
         $expandedMsg = $this->expandMessage($groupped);
-        dd('扩展后的消息：', $expandedMsg);
-        for ($j = 0; $j < 63; $j++) {
+
+        for ($j = 0; $j < 64; $j++) {
             // SS1 ← ((A ≪ 12) + E + (Tj ≪ j)) ≪ 7
             $ss1 = $this->leftCircularRotation(
                 $this->leftCircularRotation(
                     $vector[0],
                     12
-                ) + $vector[4] + ($this->leftCircularRotation($this->getTJ($j), $j)),
+                ) + $vector[4] + $this->leftCircularRotation($this->getTJ($j), $j) & 0xFFFFFFFF,
                 7
             );
             // SS2 ← SS1 ⊕ (A ≪ 12)
-            $ss2 = $ss1 ^ $this->leftCircularRotation($vector[0], 12);
+            $ss2 = ($ss1 ^ $this->leftCircularRotation($vector[0], 12)) & 0xFFFFFFFF;
             // TT1 ← FFj (A, B, C) + D + SS2 + W′j
-            $tt1 = $this->sm3FF($j, $vector[0], $vector[1], $vector[2])
-             + $vector[3] + $ss2 + $expandedMsg['dash'][$j];
+            $tt1 = ($this->sm3FF($j, $vector[0], $vector[1], $vector[2])
+             + $vector[3] + $ss2 + $expandedMsg['dash'][$j]) & 0xFFFFFFFF;
             // TT2 ← GGj (E, F, G) + H + SS1 + Wj
-            $tt2 = $this->sm3GG($j, $vector[4], $vector[5], $vector[6])
-             + $vector[7] + $ss1 + $expandedMsg['prime'][$j];
+            $tt2 = ($this->sm3GG($j, $vector[4], $vector[5], $vector[6])
+             + $vector[7] + $ss1 + $expandedMsg['prime'][$j]) & 0xFFFFFFFF;
             // 变换矩阵
             // D ← C
             // C ← B ≪ 9
             // B ← A
-            // A ← T T1
+            // A ← TT1
             // H ← G
             // G ← F ≪ 19
             // F ← E
-            // E ← P0(T T2)
+            // E ← P0(TT2)
+
             $vector[3] = $vector[2];
             $vector[2] = $this->leftCircularRotation($vector[1], 9);
             $vector[1] = $vector[0];
@@ -212,17 +203,21 @@ class SM3Encryption extends BaseCrypto
             $vector[5] = $vector[4];
             $vector[4] = $this->sm3P0($tt2);
         }
-
-        // V(i+1) ← ABCDEF GH ⊕ V(i)
-        $nextVector = [];
-        for ($i = 0; $i < 8; $i++) {
-            $nextVector[$i] = $vector[$i] ^ $vectorI[$i];
-        }
-
-        return $nextVector;
+        // V(i+1) ← ABCDEFGH ⊕ V(i)
+        $nextVector = $this->buffer2Uint32($vector) ^ $this->buffer2Uint32($vectorI);
+        return array_values(unpack('N*', $nextVector));
     }
 
-    protected function getTJ($index)
+    /**
+     * [getTJ 常量
+        Tj = {
+            79cc4519 0 ≤ j ≤ 15
+            7a879d8a 16 ≤ j ≤ 63
+        }]
+     * @param  [type] $index [description]
+     * @return [type]        [description]
+     */
+    private function getTJ($index)
     {
         if ($index >= 0 && $index <= 15) {
             return self::TJ_LT_16;
@@ -238,12 +233,15 @@ class SM3Encryption extends BaseCrypto
      * @param  [type] $input [description]
      * @return [type]        [description]
      */
-    protected function group($input)
+    private function group($input)
     {
         // buffer是字节数组，所以把512bit转换为字节长度进行分组
         $groupLength = 512 / 8;
         $output = array_chunk($input, $groupLength);
-        return $output;
+        $ret = array_map(function ($value) {
+            return $this->buffer2Str($value);
+        }, $output);
+        return $ret;
     }
 
     /**
@@ -256,7 +254,7 @@ class SM3Encryption extends BaseCrypto
      * @param  [type] $data [description]
      * @return [type]       [description]
      */
-    protected function sm3Padding($data)
+    private function sm3Padding($data)
     {
         // 转换字符串为字节数组
         $buffer = $this->str2Buffer($data);
@@ -291,7 +289,7 @@ class SM3Encryption extends BaseCrypto
      * @param  [type] $inputZ [description]
      * @return [type]         [description]
      */
-    protected function sm3FF($index, $inputX, $inputY, $inputZ)
+    private function sm3FF($index, $inputX, $inputY, $inputZ)
     {
         if ($index >= 0 && $index <= 15) {
             return $inputX ^ $inputY ^ $inputZ;
@@ -307,7 +305,7 @@ class SM3Encryption extends BaseCrypto
      * @param  [type] $inputZ [description]
      * @return [type]         [description]
      */
-    protected function sm3GG($index, $inputX, $inputY, $inputZ)
+    private function sm3GG($index, $inputX, $inputY, $inputZ)
     {
         if ($index >= 0 && $index <= 15) {
             return $inputX ^ $inputY ^ $inputZ;
@@ -315,12 +313,22 @@ class SM3Encryption extends BaseCrypto
         return ($inputX & $inputY) | (~$inputX & $inputZ);
     }
 
-    protected function sm3P0($input)
+    /**
+     * [sm3P0 置换函数 P0(X) = X ⊕ (X ≪ 9) ⊕ (X ≪ 17) 式中X为字]
+     * @param  [type] $input [description]
+     * @return [type]        [description]
+     */
+    private function sm3P0($input)
     {
         return $input ^ $this->leftCircularRotation($input, 9) ^ $this->leftCircularRotation($input, 17);
     }
 
-    protected function sm3P1($input)
+    /**
+     * [sm3P1 置换函数 P1(X) = X ⊕ (X ≪ 15) ⊕ (X ≪ 23) 式中X为字]
+     * @param  [type] $input [description]
+     * @return [type]        [description]
+     */
+    private function sm3P1($input)
     {
         return $input ^ $this->leftCircularRotation($input, 15) ^ $this->leftCircularRotation($input, 23);
     }

@@ -46,6 +46,11 @@ class BaseCrypto
         return pack('C*', ...$buffer);
     }
 
+    protected function buffer2Uint32($buffer)
+    {
+        return pack('N*', ...$buffer);
+    }
+
     /**
      * [int32 PHP位运算后溢出，需要处理为32位数值]
      * @param  uint32 $input    [64位未溢出]
@@ -89,12 +94,8 @@ class BaseCrypto
      */
     protected function leftCircularRotation($u32Buffer, int $bits)
     {
+        $bits = $bits % 32;
         return (($u32Buffer << $bits) & 0xFFFFFFFF) | $this->uRightShift($u32Buffer, 32 - $bits);
-    }
-
-    protected function leftRotate($value, $bits)
-    {
-        return (($value << $bits) | ($value >> (32 - $bits))) & 0xFFFFFFFF;
     }
 
     /**
@@ -185,6 +186,31 @@ class BaseCrypto
      */
     protected function uRightShift($i32Buffer, int $bits)
     {
-        return (0x7FFFFFFF >> ($bits - 1)) & ($i32Buffer >> $bits);
+        if (!$bits) {
+            return $this->int32($i32Buffer);
+        }
+        return $this->int32((0x7FFFFFFF >> ($bits - 1)) & ($i32Buffer >> $bits));
+    }
+
+    /**
+     * [hexArray 辅助函数，打印十六进制数组和论文示例值进行对比]
+     * @param  array $array [数值型数组]
+     * @return array        [元素为十六进制字符串的数组]
+     */
+    protected function hexArray($array)
+    {
+        $hex = array_map([$this, 'hexVal'], $array);
+        return $hex;
+    }
+
+    /**
+     * [hexVal 数值转换为16进制]
+     * @param  int $value [整型数值]
+     * @return string     [十六进制字符串]
+     */
+    protected function hexVal($value)
+    {
+        $hex = sprintf('%08x', $value);
+        return $hex;
     }
 }

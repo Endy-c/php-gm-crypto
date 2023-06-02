@@ -30,12 +30,11 @@
  *  SOFTWARE.
  */
 
-// require_once __DIR__ . "/../../../../vendor/autoload.php";
+require_once __DIR__ . "/../../../../vendor/autoload.php";
 
-require_once __DIR__ . "/../src/Encryption/SM3Encryption.php";
-use Evit\PhpGmCrypto\Encryption\SM3Encryption;
+use Evit\PhpGmCrypto\Encryption\EvitSM3Encryption;
 
-$sm3 = new SM3Encryption();
+$sm3 = new EvitSM3Encryption();
 
 $input = '1';
 
